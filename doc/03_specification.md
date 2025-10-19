@@ -52,7 +52,7 @@
 │        Presentation Layer (UI)          │  ← 将来実装
 │              (Flet)                     │
 ├─────────────────────────────────────────┤
-│        UseCase Layer                    │  ← 次のタスク
+│        UseCase Layer                    │  ✅ 完成
 │    (merge_csv_files.py)                 │
 ├─────────────────────────────────────────┤
 │        Domain Layer                     │  ✅ 完成
@@ -88,7 +88,9 @@ Presentation → UseCase → Domain ← Infrastructure
 
 #### UseCase層（アプリケーションロジック）
 - 複数の層を組み合わせたユースケース
-- **未実装**（次のタスク）
+- CSV結合の一連の処理を統括
+
+**詳細**: [08_usecase_specification.md](./08_usecase_specification.md)
 
 #### Presentation層（UI）
 - Fletを使用したユーザーインターフェース
