@@ -92,7 +92,10 @@ flet_csv/
 ├── doc/                       # ドキュメント
 │   ├── 01_plan.md            # プロジェクトプラン
 │   ├── 02_history_summary.md # 開発履歴サマリー
-│   └── 03_specification.md   # 機能仕様書（テストの前提）
+│   ├── 03_specification.md   # 全体仕様（アーキテクチャ、共通ルール）
+│   ├── 04_domain_specification.md     # Domain層詳細仕様
+│   ├── 05_infrastructure_specification.md  # Infrastructure層詳細仕様
+│   └── 06_github_setup.md    # GitHubリポジトリ登録手順
 │
 ├── scripts/                   # ユーティリティスクリプト
 │
