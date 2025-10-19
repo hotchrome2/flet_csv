@@ -9,6 +9,7 @@
 
 | ドキュメント | 内容 | 対応するテスト | 状態 |
 |------------|------|--------------|------|
+| **01_1_design_decisions.md** | 重要な設計判断とその理由 | - | ✅ 完成 |
 | **03_specification.md**（本書） | 全体アーキテクチャ、共通ルール | - | ✅ 完成 |
 | **04_domain_specification.md** | Domain層の詳細仕様 | `tests/unit/domain/**` | ✅ 完成 |
 | **05_infrastructure_specification.md** | Infrastructure層の詳細仕様 | `tests/unit/infra/**` | ✅ 完成 |

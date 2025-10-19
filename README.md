@@ -162,6 +162,7 @@ $ python main.py
 | ドキュメント | 内容 | 状態 |
 |------------|------|------|
 | [01_plan.md](./doc/01_plan.md) | プロジェクトプラン | ✅ |
+| [01_1_design_decisions.md](./doc/01_1_design_decisions.md) | 重要な設計判断とその理由 | ✅ |
 | [02_history_summary.md](./doc/02_history_summary.md) | 開発履歴サマリー | ✅ |
 | [03_specification.md](./doc/03_specification.md) | 全体仕様（アーキテクチャ、共通ルール） | ✅ |
 | [04_domain_specification.md](./doc/04_domain_specification.md) | Domain層の詳細仕様 | ✅ |
