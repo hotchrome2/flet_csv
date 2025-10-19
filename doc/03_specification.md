@@ -7,12 +7,13 @@
 
 ## 📚 仕様書の構成
 
-| ドキュメント | 内容 | 対応するテスト |
-|------------|------|--------------|
-| **03_specification.md**（本書） | 全体アーキテクチャ、共通ルール | - |
-| **04_domain_specification.md** | Domain層の詳細仕様 | `tests/unit/domain/**` |
-| **05_infrastructure_specification.md** | Infrastructure層の詳細仕様 | `tests/unit/infra/**` |
-| （将来）**06_usecase_specification.md** | UseCase層の詳細仕様 | `tests/unit/usecase/**` |
+| ドキュメント | 内容 | 対応するテスト | 状態 |
+|------------|------|--------------|------|
+| **03_specification.md**（本書） | 全体アーキテクチャ、共通ルール | - | ✅ 完成 |
+| **04_domain_specification.md** | Domain層の詳細仕様 | `tests/unit/domain/**` | ✅ 完成 |
+| **05_infrastructure_specification.md** | Infrastructure層の詳細仕様 | `tests/unit/infra/**` | ✅ 完成 |
+| **08_usecase_specification.md** | UseCase層の詳細仕様 | `tests/unit/usecase/**` | ✅ 完成 |
+| **09_cli_specification.md** | CLIエントリーポイントの詳細仕様 | `tests/e2e/**` | ✅ 完成 |
 
 ---
 
