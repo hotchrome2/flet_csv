@@ -87,20 +87,29 @@ https://github.com/hotchrome2/flet_csv.git
 
 ### 3.1 現在のブランチ確認
 
+既にローカルに`main`と`develop`ブランチが存在することを確認します。
+
 ```bash
+# ローカルのすべてのブランチを表示
 git branch -v
 ```
 
 **実行例の出力**:
 ```
-* develop 68b8e72 feat: Domain層とInfrastructure層の実装完了
+  develop 68b8e72 feat: Domain層とInfrastructure層の実装完了
+* main    68b8e72 feat: Domain層とInfrastructure層の実装完了
 ```
 
-### 3.2 開発ブランチの作成（未作成の場合）
+### 3.2 ブランチが存在しない場合
+
+もし`develop`または`main`ブランチが存在しない場合は、作成します：
 
 ```bash
-# developブランチを作成して切り替え
+# developブランチを作成（まだ存在しない場合）
 git checkout -b develop
+
+# mainブランチを作成（まだ存在しない場合）
+git checkout -b main
 ```
 
 ### 3.3 ブランチ戦略
@@ -117,6 +126,22 @@ main (本番・安定版)
 - `main`: 本番環境にデプロイ可能な安定版
 - `develop`: 開発版（次のリリース候補）
 - `feature/*`: 新機能開発用（developから分岐）
+
+### 3.4 ブランチの内容を確認
+
+両方のブランチが同じコミットを指しているか確認：
+
+```bash
+# 各ブランチの最新コミットを確認
+git log main --oneline -1
+git log develop --oneline -1
+```
+
+**期待される出力**（同じコミットハッシュ）:
+```
+68b8e72 feat: Domain層とInfrastructure層の実装完了
+68b8e72 feat: Domain層とInfrastructure層の実装完了
+```
 
 ---
 
@@ -162,45 +187,53 @@ git remote add origin git@github.com:hotchrome2/flet_csv.git
 
 ## 5. ブランチのプッシュ
 
-### 5.1 developブランチをプッシュ
+既にローカルに`main`と`develop`ブランチが存在するので、両方を順番にプッシュします。
+
+### 5.1 mainブランチをプッシュ
+
+まず、安定版の`main`ブランチをプッシュします。
 
 ```bash
+# mainブランチに切り替え
+git checkout main
+
+# mainブランチをプッシュ（上流ブランチとして設定）
+git push -u origin main
+```
+
+**コマンドの意味**:
+- `git checkout main`: mainブランチに切り替え
+- `git push -u origin main`: リモートにプッシュし、上流ブランチとして設定
+  - `-u`: 上流ブランチとして設定（以降は`git push`だけでOK）
+  - `origin`: リモート名
+  - `main`: プッシュするブランチ名
+
+**実行例の出力**:
+```
+Switched to branch 'main'
+branch 'main' set up to track 'origin/main'.
+To https://github.com/hotchrome2/flet_csv.git
+ * [new branch]      main -> main
+```
+
+### 5.2 developブランチをプッシュ
+
+次に、開発版の`develop`ブランチをプッシュします。
+
+```bash
+# developブランチに切り替え
+git checkout develop
+
 # developブランチをプッシュ（上流ブランチとして設定）
 git push -u origin develop
 ```
 
-**コマンドの意味**:
-- `git push`: リモートにプッシュ
-- `-u`: 上流ブランチとして設定（以降は`git push`だけでOK）
-- `origin`: リモート名
-- `develop`: プッシュするブランチ名
-
 **実行例の出力**:
 ```
+Switched to branch 'develop'
 branch 'develop' set up to track 'origin/develop'.
 To https://github.com/hotchrome2/flet_csv.git
  * [new branch]      develop -> develop
-```
-
-### 5.2 mainブランチを作成してプッシュ
-
-```bash
-# developと同じ内容でmainブランチを作成
-git checkout -b main
-
-# mainブランチをプッシュ
-git push -u origin main
-
-# developブランチに戻る
-git checkout develop
-```
-
-**実行例の出力**:
-```
-Switched to a new branch 'main'
-To https://github.com/hotchrome2/flet_csv.git
- * [new branch]      main -> main
-Switched to branch 'develop'
 ```
 
 ### 5.3 プッシュ結果の確認
@@ -556,12 +589,14 @@ git remote show origin
 
 ### 初回セットアップの流れ
 
+**前提条件**: ローカルに`main`と`develop`ブランチが既に存在
+
 1. ✅ GitHubでリポジトリ作成（初期化なし）
-2. ✅ ローカルでdevelopブランチ作成
+2. ✅ ローカルブランチの確認（`git branch -v`）
 3. ✅ リモートリポジトリを登録（`git remote add origin`）
-4. ✅ developブランチをプッシュ（`git push -u origin develop`）
-5. ✅ mainブランチを作成してプッシュ
-6. ✅ README.mdを充実化
+4. ✅ mainブランチをプッシュ（`git push -u origin main`）
+5. ✅ developブランチをプッシュ（`git push -u origin develop`）
+6. ✅ README.mdを充実化してプッシュ
 7. ✅ GitHub設定（Description, Topics, Branch protection）
 
 ### 日常の運用
