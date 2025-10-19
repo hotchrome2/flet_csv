@@ -1,2 +1,1 @@
-"""UseCase layer unit tests"""
-
+"""UseCase層の単体テスト"""
