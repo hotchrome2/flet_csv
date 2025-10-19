@@ -54,20 +54,32 @@ class CsvRepository:
         # CsvFileオブジェクトを作成して返す
         return CsvFile(file_path=path, data=df)
 
-    def save(self, csv_file: CsvFile, output_path: str | Path) -> None:
-        """CsvFileを指定パスに保存
+    def save(self, csv_file: CsvFile, output_dir: str | Path) -> Path:
+        """CsvFileを指定ディレクトリに保存
         
         Args:
             csv_file: 保存するCsvFileオブジェクト
-            output_path: 出力先のパス
+            output_dir: 出力先のディレクトリ
+            
+        Returns:
+            保存されたファイルのパス
         """
-        path = Path(output_path)
+        from datetime import datetime
         
-        # 親ディレクトリが存在しない場合は作成
-        path.parent.mkdir(parents=True, exist_ok=True)
+        output_dir_path = Path(output_dir)
+        
+        # 出力ディレクトリが存在しない場合は作成
+        output_dir_path.mkdir(parents=True, exist_ok=True)
+        
+        # タイムスタンプ付きのファイル名を生成
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        output_file_name = f"merged_{timestamp}.csv"
+        output_path = output_dir_path / output_file_name
         
         # UTF-8で保存
-        csv_file.data.to_csv(path, index=False, encoding="utf-8")
+        csv_file.data.to_csv(output_path, index=False, encoding="utf-8")
+        
+        return output_path
 
     def _detect_encoding(self, file_path: Path) -> str:
         """ファイルの文字コードを自動判定

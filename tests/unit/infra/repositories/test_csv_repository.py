@@ -115,7 +115,7 @@ class TestCsvRepository:
         assert "見つかりません" in str(exc_info.value) or "not found" in str(exc_info.value).lower()
 
     def test_save_csv_file(self, csv_repository, temp_dir):
-        """CsvFileを指定パスに保存できる"""
+        """CsvFileを指定ディレクトリに保存できる"""
         # Arrange: 保存するCsvFileを作成
         import pandas as pd
         datetime_list = [f"2025/10/18 {hour:02d}:00:00" for hour in range(24)]
@@ -129,13 +129,16 @@ class TestCsvRepository:
             "参照": [1] * 24,
         })
         csv_file = CsvFile(file_path="test.csv", data=data)
-        output_path = temp_dir / "output.csv"
+        output_dir = temp_dir / "output"
         
         # Act
-        csv_repository.save(csv_file, output_path)
+        output_path = csv_repository.save(csv_file, output_dir)
         
         # Assert
         assert output_path.exists()
+        assert output_path.parent == output_dir
+        assert output_path.name.startswith("merged_")
+        assert output_path.suffix == ".csv"
         # 保存されたファイルを読み込んで検証
         loaded = csv_repository.load(output_path)
         assert loaded.row_count == 24
