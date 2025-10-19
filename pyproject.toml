@@ -1,0 +1,26 @@
+[project]
+name = "flet-csv"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "flet>=0.28.3",
+    "jupyterlab>=4.4.9",
+    "jupyterlab-code-formatter>=3.0.2",
+    "lckr-jupyterlab-variableinspector>=3.2.4",
+    "matplotlib>=3.10.7",
+    "numpy>=2.3.4",
+    "pandas>=2.3.3",
+    "seaborn>=0.13.2",
+]
+
+[dependency-groups]
+dev = [
+    "black>=25.9.0",
+    "icecream>=2.1.8",
+    "isort>=7.0.0",
+    "mypy>=1.18.2",
+    "pytest>=8.4.2",
+    "pytest-mock>=3.15.1",
+]
