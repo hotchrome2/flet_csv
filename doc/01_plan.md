@@ -95,7 +95,8 @@ flet_csv/
 │   ├── 03_specification.md   # 全体仕様（アーキテクチャ、共通ルール）
 │   ├── 04_domain_specification.md     # Domain層詳細仕様
 │   ├── 05_infrastructure_specification.md  # Infrastructure層詳細仕様
-│   └── 06_github_setup.md    # GitHubリポジトリ登録手順
+│   ├── 06_github_setup.md    # GitHubリポジトリ登録手順
+│   └── 07_git_workflow.md    # Git開発ワークフロー（feature→develop→main）
 │
 ├── scripts/                   # ユーティリティスクリプト
 │
