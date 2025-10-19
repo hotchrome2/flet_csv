@@ -231,12 +231,14 @@ flet_csv/
   - CsvRepositoryでの自動検証
   - pd.to_datetime()での変換可能性チェック（検証と結合の一貫性確保）
 
-#### タスク4: UseCase層の実装（TDDサイクル）⏳ **次のタスク**
-- [ ] **Red**: `usecase/merge_csv_files.py` の統合テスト作成
-- [ ] **Green**: `usecase/merge_csv_files.py` の実装
-- [ ] **Refactor**: UseCase層のリファクタリング
+#### タスク4: UseCase層の実装（TDDサイクル）✅ **完了**
+- [x] **Red**: `usecase/merge_csv_files.py` の統合テスト作成
+- [x] **Green**: `usecase/merge_csv_files.py` の実装
+- [x] **Refactor**: UseCase層のリファクタリング
 
-#### タスク5: エントリーポイントの実装
+**完成状況**: 1モジュール、9テスト、100%成功 + 全体89テスト成功 🎉
+
+#### タスク5: エントリーポイントの実装 ⏳ **次のタスク**
 - [ ] `main.py` の実装（CLI版）
 - [ ] ログ出力の実装
 - [ ] エンドツーエンドテスト

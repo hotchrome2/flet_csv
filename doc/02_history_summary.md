@@ -1596,10 +1596,269 @@ developからfeatureブランチを作成し、developとmainに反映し、GitH
 
 ---
 
+---
+
+## 📅 2025年10月19日 - UseCase層の実装完了（TDD）
+
+### 🎯 目的
+
+CSV結合の一連の処理を統括するUseCase層を実装。
+TDDサイクル（Red-Green-Refactor）で開発。
+
+---
+
+### 📊 TDDサイクルの実施
+
+#### 🔴 **Red フェーズ**: テストファースト
+
+**作成したテストファイル**: `tests/unit/usecase/test_merge_csv_files.py`
+
+**テスト内容**（9テスト）:
+
+1. **正常系**:
+   - ✅ 2つのCSVファイルを正常に結合
+   - ✅ 1つのCSVファイルでも正常に処理
+   - ✅ 複数ファイル（3つ以上）を正常に結合
+   - ✅ MergeResultオブジェクトを返す
+
+2. **異常系**:
+   - ✅ ファイルが見つからない場合、失敗を返す
+   - ✅ CSVフォーマットが不正な場合、失敗を返す
+   - ✅ 結合時にエラーが発生した場合、失敗を返す
+   - ✅ 空のCSVファイルの場合、失敗を返す
+   - ✅ 入力ファイルリストが空の場合、失敗を返す
+
+**モック活用**:
+- CsvRepositoryとCsvMergerをモック化
+- 外部依存を分離して単体テストを実現
+
+**最初のテスト実行結果**: ❌ **失敗（期待通り）**
+```
+ModuleNotFoundError: No module named 'usecase.merge_csv_files'
+```
+
+---
+
+#### 🟢 **Green フェーズ**: 実装
+
+**作成したファイル**: `usecase/merge_csv_files.py`
+
+**実装内容**:
+
+```python
+class MergeCsvFilesUseCase:
+    """CSV結合ユースケース"""
+    
+    def __init__(self, repository=None, merger=None):
+        self.repository = repository or CsvRepository()
+        self.merger = merger or CsvMerger()
+    
+    def execute(self, input_paths, output_dir) -> MergeResult:
+        # 1. 入力ファイルリストの検証
+        # 2. ファイルを読み込み
+        # 3. CSVファイルを結合
+        # 4. 結合結果を保存
+        # 5. MergeResultを返す
+        # エラーハンドリング（各種ドメイン例外）
+```
+
+**主要機能**:
+
+1. **入力検証**:
+   - 空リストチェック
+
+2. **ファイル読み込み**:
+   - CsvRepository.load()を使用
+   - 各ファイルをCsvFileモデルに変換
+
+3. **結合処理**:
+   - CsvMerger.merge()を使用
+   - ドメインサービスに委譲
+
+4. **保存処理**:
+   - CsvRepository.save()を使用
+   - タイムスタンプ付きファイル名で保存
+
+5. **エラーハンドリング**:
+   - `CsvFileNotFoundError` → "ファイルが見つかりません"
+   - `InvalidCsvFormatError` → "CSVフォーマットが不正です"
+   - `MergeError` → "結合処理でエラーが発生しました"
+   - `EmptyDataError` → "データが空です"
+   - `CsvMergerError` → "CSV結合エラー"
+   - `Exception` → "予期しないエラーが発生しました"
+
+6. **結果返却**:
+   - 成功時: `MergeResult.create_success()`
+   - 失敗時: `MergeResult.create_failure()`
+
+**テスト実行結果**: ✅ **全9テスト成功**
+
+---
+
+#### 🔵 **Refactor フェーズ**: リファクタリング
+
+**実施内容**:
+
+1. **パッケージ化**:
+   - `usecase/__init__.py`を作成
+   - `MergeCsvFilesUseCase`をエクスポート
+
+2. **テストパッケージ化**:
+   - `tests/unit/usecase/__init__.py`を作成
+
+3. **コード品質確認**:
+   - ✅ リンターエラー: なし
+   - ✅ 型ヒント: 適切
+   - ✅ ドキュメント: 十分
+   - ✅ 単一責任原則: 遵守
+
+**テスト実行結果**: ✅ **全89テスト成功**
+
+---
+
+### 🎯 Git フロー（feature/usecase-layer）
+
+**ブランチ管理**:
+
+```bash
+# 1. featureブランチ作成
+git checkout develop
+git pull origin develop
+git checkout -b feature/usecase-layer
+
+# 2. TDD開発（Red-Green-Refactor）
+git add .
+git commit -m "feat: UseCase層の実装完了"
+
+# 3. developにマージ
+git checkout develop
+git pull origin develop
+git merge feature/usecase-layer  # Fast-forward
+uv run pytest tests/unit/ -q  # 全89テスト成功
+git push origin develop
+
+# 4. featureブランチ削除
+git branch -d feature/usecase-layer
+```
+
+---
+
+### 📊 実装の詳細
+
+#### UseCase層の責務
+
+```
+┌─────────────────────────────────────┐
+│   MergeCsvFilesUseCase              │
+│   (アプリケーションロジック)         │
+├─────────────────────────────────────┤
+│  1. 入力検証                         │
+│  2. ファイル読み込み (Repository)    │
+│  3. 結合処理 (Merger)                │
+│  4. 保存処理 (Repository)            │
+│  5. 結果返却 (MergeResult)           │
+│  6. エラーハンドリング               │
+└─────────────────────────────────────┘
+```
+
+#### 依存関係
+
+```
+MergeCsvFilesUseCase
+    ↓ 使用
+CsvRepository (Infrastructure)
+    ↓ 生成
+CsvFile (Domain)
+    ↓ 渡す
+CsvMerger (Domain)
+    ↓ 返却
+MergeResult (Domain)
+```
+
+#### エラーハンドリング戦略
+
+- **ドメイン例外をキャッチ**: 各種CsvMergerError階層
+- **適切なメッセージに変換**: ユーザーフレンドリーなエラーメッセージ
+- **MergeResult.create_failure()**: 失敗結果を統一的に返す
+
+---
+
+### 📈 テスト結果
+
+| テストケース | 結果 |
+|------------|------|
+| 正常系: 2ファイル結合 | ✅ |
+| 正常系: 1ファイル処理 | ✅ |
+| 正常系: 複数ファイル結合 | ✅ |
+| 正常系: MergeResult返却 | ✅ |
+| 異常系: ファイル未存在 | ✅ |
+| 異常系: 不正フォーマット | ✅ |
+| 異常系: 結合エラー | ✅ |
+| 異常系: 空データ | ✅ |
+| 異常系: 空リスト | ✅ |
+
+**合計**: 9テスト、100%成功 🎉  
+**全体**: 89テスト、100%成功 🎉
+
+---
+
+### 🎯 重要なポイント
+
+#### **1. TDDのメリットを実感**
+- ✅ テストファーストで設計が明確に
+- ✅ 実装中の不安がない
+- ✅ リファクタリングが安全
+
+#### **2. モックの活用**
+- ✅ CsvRepositoryをモック化
+- ✅ CsvMergerをモック化
+- ✅ 外部依存を分離して単体テストを実現
+
+#### **3. Clean Architectureの利点**
+- ✅ UseCase層は純粋なアプリケーションロジック
+- ✅ DomainとInfrastructureを組み合わせるだけ
+- ✅ 各層の責務が明確
+
+#### **4. エラーハンドリングの統一**
+- ✅ すべてのドメイン例外をキャッチ
+- ✅ ユーザーフレンドリーなメッセージに変換
+- ✅ MergeResultで統一的に返す
+
+---
+
+### 📝 教訓
+
+#### **テストファーストの威力**
+- 実装前にインターフェースが明確になる
+- テストが仕様書として機能
+- 実装中に「何を作るべきか」で迷わない
+
+#### **モックを活用した単体テスト**
+- 外部依存を分離できる
+- テストが高速になる
+- テストが安定する
+
+#### **レイヤー間の依存関係**
+- UseCaseはDomainとInfrastructureを組み合わせる
+- 各層の責務が明確
+- テストが容易
+
+---
+
+### 🚀 次のステップ
+
+**タスク5: エントリーポイントの実装**
+- `main.py`の実装（CLI版）
+- ログ出力の実装
+- エンドツーエンドテスト
+
+---
+
 ## 変更履歴
 
 | 日付 | バージョン | 変更内容 |
 |------|-----------|---------|
+| 2025-10-19 | 3.0.0 | UseCase層実装完了（TDD） - MergeCsvFilesUseCase、全89テスト成功 🎉 |
 | 2025-10-19 | 2.4.0 | Git開発ワークフロー文書化 - feature→develop→mainの完全な手順、全80テスト成功 |
 | 2025-10-19 | 2.3.0 | GitHubリポジトリ登録 - README充実化、登録手順ドキュメント化、全80テスト成功 |
 | 2025-10-19 | 2.2.1 | 仕様書階層化 - 全体・Domain・Infrastructure層で分割、全80テスト成功 |
