@@ -48,8 +48,15 @@ class CsvRepository:
         # 正規化
         df = self._normalize(df)
         
+        # 重複行を除去（全列でユニークな行のみ残す）
+        df = self._remove_duplicates(df)
+        
         # データの妥当性を検証（日時の妥当性チェック）
+        # ソート前に不正な日時がないことを確認
         self._validate_data(df, path.name)
+        
+        # 日時列でソート（検証済みの正常なデータのみをソート）
+        df = self._sort_by_datetime(df)
         
         # CsvFileオブジェクトを作成して返す
         return CsvFile(file_path=path, data=df)
@@ -258,4 +265,42 @@ class CsvRepository:
                 invalid_lines=invalid_lines,
                 error_type="不正な日時"
             )
+
+    def _remove_duplicates(self, df: pd.DataFrame) -> pd.DataFrame:
+        """全列でユニークな行のみを残す
+        
+        同じデータが複数存在する場合、最初の行のみを残します。
+        
+        Args:
+            df: 処理対象のDataFrame
+            
+        Returns:
+            重複が除去されたDataFrame
+        """
+        # 全列を対象に重複を除去（最初の行を残す）
+        return df.drop_duplicates(keep='first').reset_index(drop=True)
+
+    def _sort_by_datetime(self, df: pd.DataFrame) -> pd.DataFrame:
+        """日時列でソート
+        
+        日時列を一時的にdatetime型に変換してソートし、
+        標準フォーマットに戻します。
+        このメソッドは検証済みの正常なデータに対してのみ呼ばれます。
+        
+        Args:
+            df: 処理対象のDataFrame（検証済み）
+            
+        Returns:
+            日時順にソートされたDataFrame
+        """
+        timestamp_col = CsvSchema.TIMESTAMP_COLUMN
+        
+        # 日時列をdatetime型に変換してソート
+        df[timestamp_col] = pd.to_datetime(df[timestamp_col])
+        df = df.sort_values(by=timestamp_col).reset_index(drop=True)
+        
+        # 標準フォーマット（YYYY/MM/DD HH:MM:SS）に統一
+        df[timestamp_col] = df[timestamp_col].dt.strftime("%Y/%m/%d %H:%M:%S")
+        
+        return df
 
