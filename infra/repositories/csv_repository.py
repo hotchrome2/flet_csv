@@ -4,6 +4,8 @@
 統一された7列フォーマットに正規化してDomain層に渡します。
 """
 from pathlib import Path
+import zipfile
+import tempfile
 import pandas as pd
 
 from domain.models.csv_file import CsvFile
@@ -87,6 +89,40 @@ class CsvRepository:
         csv_file.data.to_csv(output_path, index=False, encoding="utf-8")
         
         return output_path
+
+    def load_from_zip(self, zip_path: str | Path) -> list[CsvFile]:
+        """ZIP内のCSVファイルを読み込み、正規化したCsvFileのリストを返す
+        
+        一時ディレクトリに展開し、処理後に自動削除します。
+        
+        Args:
+            zip_path: 入力ZIPファイルのパス
+        
+        Returns:
+            CsvFileオブジェクトのリスト
+        
+        Raises:
+            CsvFileNotFoundError: ZIPファイルが存在しない場合
+            InvalidCsvFormatError: CSVフォーマットが不正な場合
+        """
+        path = Path(zip_path)
+        if not path.exists():
+            raise CsvFileNotFoundError(f"ZIPファイルが見つかりません: {zip_path}")
+
+        csv_files: list[CsvFile] = []
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmpdir_path = Path(tmpdir)
+            # ZIPを展開
+            with zipfile.ZipFile(path, 'r') as zf:
+                zf.extractall(tmpdir_path)
+
+            # 再帰的にCSVを探索
+            for csv_path in tmpdir_path.glob("**/*.csv"):
+                # 既存のloadを再利用
+                csv_files.append(self.load(csv_path))
+
+        return csv_files
 
     def _detect_encoding(self, file_path: Path) -> str:
         """ファイルの文字コードを自動判定
