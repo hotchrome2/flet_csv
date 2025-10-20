@@ -812,10 +812,230 @@ merged_df[timestamp_col] = merged_df[timestamp_col].dt.strftime(output_format)
 
 ---
 
+### 5.5 Infrastructure層とDomain層の両方でデータ検証を行う理由
+
+**判断日**: 2025-10-19  
+**関連ファイル**: `infra/repositories/csv_repository.py`, `domain/models/csv_file.py`
+
+#### 5.5.1 現在の実装
+
+**Infrastructure層（CsvRepository.load()）**:
+```python
+def load(self, file_path: str | Path) -> CsvFile:
+    # 1. CSVを読み込み
+    df = self._read_csv(path, encoding)
+    
+    # 2. 正規化（7列フォーマットへ）
+    df = self._normalize(df)
+    
+    # 3. 重複行を除去
+    df = self._remove_duplicates(df)
+    
+    # 4. データの妥当性を検証（日時の妥当性チェック）
+    self._validate_data(df, path.name)  # ← Infrastructure層のチェック
+    
+    # 5. 日時列でソート
+    df = self._sort_by_datetime(df)
+    
+    # 6. CsvFileオブジェクトを作成
+    return CsvFile(file_path=path, data=df)  # ← Domain層でも再度チェック
+```
+
+**Domain層（CsvFile.__init__）**:
+```python
+def __init__(self, file_path, data, skip_daily_validation=False):
+    # 1. データが空でないかチェック
+    if data.empty:
+        raise EmptyDataError(...)
+    
+    # 2. スキーマバリデーション（必須カラムのチェック）
+    CsvSchema.validate_and_raise(list(data.columns))
+    
+    # 3. 1日分のデータ制約の検証（0時〜23時）
+    if not skip_daily_validation:
+        datetime_values = data[CsvSchema.TIMESTAMP_COLUMN].astype(str).tolist()
+        if not CsvSchema.validate_daily_time_range(datetime_values):
+            raise InvalidCsvFormatError(...)
+    
+    self._data = data
+```
+
+**一見すると重複しているように見える検証**:
+- Infrastructure層: `_validate_data()` - 日時の妥当性
+- Domain層: `validate_daily_time_range()` - 1日24時間の制約
+
+#### 5.5.2 検討した代替案
+
+##### 代替案: Infrastructure層にすべてのチェックを集約
+
+```python
+# infra/repositories/csv_repository.py
+def load(self, file_path: str | Path) -> CsvFile:
+    df = self._read_csv(path, encoding)
+    df = self._normalize(df)
+    df = self._remove_duplicates(df)
+    
+    # すべてのチェックをInfrastructure層で実施
+    self._validate_data(df, path.name)           # 日時の妥当性
+    self._validate_schema(df)                    # 必須カラム
+    self._validate_daily_time_range(df)          # 1日24時間
+    self._validate_not_empty(df)                 # 空データ
+    
+    df = self._sort_by_datetime(df)
+    
+    # CsvFileはチェックなしで作成
+    return CsvFile(file_path=path, data=df, skip_all_validation=True)
+```
+
+**却下理由**:
+
+1. **ドメインモデルの不変条件が保証されない**
+   ```python
+   # 問題: 他の経路からCsvFileを作成した場合
+   df = pd.DataFrame(...)  # 不正なデータ
+   csv_file = CsvFile(data=df, file_path="test.csv")
+   # ↑ バリデーションがないので不正なデータでもCsvFileが作れてしまう
+   ```
+
+2. **依存関係の逆転**
+   - 「1日24時間のデータ」はビジネスルール（ドメイン層の責務）
+   - Infrastructure層がビジネスルールを知るのは責務違反
+
+3. **再利用性の低下**
+   ```python
+   # 将来、別のソースからCsvFileを作る場合
+   csv_file = CsvFile.from_database(...)
+   csv_file = CsvFile.from_api(...)
+   csv_file = CsvMerger.merge([csv1, csv2])
+   # ↑ Infrastructure層のチェックを通らないため、不正なデータが混入する可能性
+   ```
+
+4. **防御的プログラミングの原則に反する**
+   - 外部から来たデータは常に検証すべき
+   - 「Infrastructure層でチェック済み」という暗黙の前提に依存してしまう
+
+#### 5.5.3 採用した設計の理由
+
+**方針**: 責務の分離と防御的プログラミング
+
+| 層 | 責務 | チェック内容 |
+|----|------|------------|
+| **Infrastructure層** | 外部データの正規化と技術的検証 | ・ファイル存在<br>・文字コード検出<br>・正規化（7列フォーマット）<br>・重複除去<br>・日時の妥当性（pd.to_datetime可能か）<br>・ソート |
+| **Domain層** | ビジネスルールの保証（不変条件） | ・空データ禁止<br>・必須カラム存在<br>・1日24時間のデータ（ビジネスルール） |
+
+**1. 不変条件の保証（Invariant）**
+
+```python
+# CsvFileは「常に有効なデータを持つ」ことを保証
+# どこから作成されても、必ず検証される
+
+csv_file1 = repository.load("file.csv")        # ✅ 検証される
+csv_file2 = CsvFile(data=df, ...)              # ✅ 検証される
+csv_file3 = CsvMerger.merge([csv1, csv2])      # ✅ 検証される
+```
+
+**2. 責務の分離（Single Responsibility Principle）**
+
+```python
+# Infrastructure層: 「外部データを内部形式に変換する」
+# - 技術的な問題（文字コード、フォーマット違い）を吸収
+# - ドメイン層が処理しやすい形に整形
+
+# Domain層: 「ビジネスルールを満たすデータのみ受け入れる」
+# - どんな経路から来たデータでも、ビジネスルールを強制
+# - ドメインモデルの整合性を保証
+```
+
+**3. 防御的プログラミング**
+
+```python
+# 悪い例: Infrastructure層を信頼しすぎる
+class CsvFile:
+    def __init__(self, data):
+        self._data = data  # 検証なし
+        # 問題: 不正なデータでもCsvFileが作れてしまう
+
+# 良い例: 常に検証する（現在の実装）
+class CsvFile:
+    def __init__(self, data):
+        # どこから来たデータでも必ず検証
+        self._validate(data)
+        self._data = data
+```
+
+#### 5.5.4 チェックの重複についての考察
+
+**重複しているように見えるが、実は役割が異なる**:
+
+| 検証内容 | Infrastructure層 | Domain層 |
+|---------|-----------------|----------|
+| **日時の妥当性** | ✅ `pd.to_datetime()`で変換可能か<br>（技術的な検証） | ✅ 1日24時間（0-23時）が揃っているか<br>（ビジネスルール） |
+| **目的** | ソート処理を安全に実行するため | ドメインモデルの不変条件を保証するため |
+| **例外の意味** | 「データが技術的に処理不可能」 | 「ビジネスルールを満たしていない」 |
+
+**実際の処理フロー**:
+```
+CSV読み込み
+  ↓
+正規化・重複除去
+  ↓
+[Infrastructure層] 日時が解析可能か？
+  ↓ Yes
+ソート（日時順）
+  ↓
+[Domain層] 1日24時間が揃っているか？
+  ↓ Yes
+CsvFile作成（不変条件が保証されたドメインモデル）
+```
+
+#### 5.5.5 メリットとデメリット
+
+**メリット**:
+- ✅ **安全性**: どんな経路でもCsvFileは有効なデータを保証
+- ✅ **責務の明確化**: Infrastructure層は技術的処理、Domain層はビジネスルール
+- ✅ **保守性**: 将来、新しいデータソースを追加しても安全
+- ✅ **テストの容易性**: 各層を独立してテストできる
+
+**デメリット**:
+- ❌ **若干の重複**: 検証ロジックが2箇所に分散
+  - **対策**: 各層の責務を明確に文書化（本ドキュメント）
+- ❌ **パフォーマンス**: 同じデータを2回チェック
+  - **影響**: 微小（24行のチェックは高速）、安全性を優先
+
+#### 5.5.6 将来の見直しポイント
+
+以下の状況になった場合、再検討する：
+
+1. **パフォーマンスが問題になる**:
+   - 大量のファイル（数千ファイル）を処理する場合
+   - チェックの重複が実測でボトルネックになった場合
+
+2. **新しいデータソースが追加される**:
+   - データベース、API、外部サービスなど
+   - すべてのソースで同じ検証が必要なことを確認
+
+3. **ビジネスルールが複雑化する**:
+   - 1日24時間以外の制約が追加される
+   - より複雑な時間範囲の検証が必要になる
+
+#### 5.5.7 教訓
+
+> **「層ごとに異なる責務でデータを検証する」**
+
+- **Infrastructure層**: 「このデータは技術的に処理できるか？」
+- **Domain層**: 「このデータはビジネスルールを満たしているか？」
+
+この分離により、各層が独立して進化でき、システム全体の安全性と保守性が向上する。
+
+**トレードオフ**: 若干の重複 < 安全性と責務の明確化
+
+---
+
 ## 変更履歴
 
 | 日付 | バージョン | 変更内容 | 著者 |
 |------|-----------|---------|------|
+| 2025-10-19 | 1.3.0 | Infrastructure層とDomain層の二重検証の理由を記録 | - |
 | 2025-10-19 | 1.2.0 | 出力日時フォーマット統一の理由を記録 - コメント明確化 | - |
 | 2025-10-19 | 1.1.0 | 日時フォーマットの柔軟化 - 固定フォーマットからpandas認識可能形式へ変更 | - |
 | 2025-10-19 | 1.0.0 | 初版作成 - @dataclass不採用の理由など5つの設計判断を記録 | - |
