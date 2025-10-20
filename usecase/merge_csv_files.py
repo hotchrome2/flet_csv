@@ -62,60 +62,11 @@ class MergeCsvFilesUseCase:
 
         try:
             # 1. ファイルを読み込み
-            csv_files = []
-            for path in input_paths:
-                csv_file = self.repository.load(path)
-                csv_files.append(csv_file)
-
-            # 2. CSVファイルを結合
-            merged_file = self.merger.merge(csv_files)
-
-            # 3. 結合結果を保存
-            output_path = self.repository.save(merged_file, output_dir)
-
-            # 4. 成功結果を返す
-            return MergeResult.create_success(
-                output_path=output_path,
-                merged_file_count=len(csv_files),
-                total_rows=len(merged_file.data),
-                message=f"CSVファイルの結合が完了しました。出力: {output_path}"
-            )
-
-        except CsvFileNotFoundError as e:
-            # ファイルが見つからないエラー
-            return MergeResult.create_failure(
-                error_message=f"ファイルが見つかりません: {str(e)}"
-            )
-
-        except InvalidCsvFormatError as e:
-            # CSVフォーマットエラー
-            return MergeResult.create_failure(
-                error_message=f"CSVフォーマットが不正です: {str(e)}"
-            )
-
-        except MergeError as e:
-            # 結合処理エラー
-            return MergeResult.create_failure(
-                error_message=f"結合処理でエラーが発生しました: {str(e)}"
-            )
-
-        except EmptyDataError as e:
-            # 空データエラー
-            return MergeResult.create_failure(
-                error_message=f"データが空です: {str(e)}"
-            )
-
-        except CsvMergerError as e:
-            # その他のドメインエラー
-            return MergeResult.create_failure(
-                error_message=f"CSV結合エラー: {str(e)}"
-            )
-
+            csv_files = [self.repository.load(path) for path in input_paths]
+            # 2-4. 結合して保存し、結果を生成
+            return self._merge_and_save(csv_files, output_dir)
         except Exception as e:
-            # 予期しないエラー
-            return MergeResult.create_failure(
-                error_message=f"予期しないエラーが発生しました: {str(e)}"
-            )
+            return self._handle_exception(e)
 
 
     def execute_from_zip(
@@ -135,54 +86,37 @@ class MergeCsvFilesUseCase:
         try:
             # 1. ZIPからCSV群を読み込み
             csv_files = self.repository.load_from_zip(zip_path)
-
             # 空チェック
             if not csv_files:
                 return MergeResult.create_failure(
                     error_message="ZIPファイル内にCSVファイルがありません"
                 )
-
-            # 2. CSVファイルを結合
-            merged_file = self.merger.merge(csv_files)
-
-            # 3. 結合結果を保存
-            output_path = self.repository.save(merged_file, output_dir)
-
-            # 4. 成功結果を返す
-            return MergeResult.create_success(
-                output_path=output_path,
-                merged_file_count=len(csv_files),
-                total_rows=len(merged_file.data),
-                message=f"CSVファイルの結合が完了しました。出力: {output_path}"
-            )
-
-        except CsvFileNotFoundError as e:
-            return MergeResult.create_failure(
-                error_message=f"ファイルが見つかりません: {str(e)}"
-            )
-        
-        except InvalidCsvFormatError as e:
-            return MergeResult.create_failure(
-                error_message=f"CSVフォーマットが不正です: {str(e)}"
-            )
-        
-        except MergeError as e:
-            return MergeResult.create_failure(
-                error_message=f"結合処理でエラーが発生しました: {str(e)}"
-            )
-        
-        except EmptyDataError as e:
-            return MergeResult.create_failure(
-                error_message=f"データが空です: {str(e)}"
-            )
-        
-        except CsvMergerError as e:
-            return MergeResult.create_failure(
-                error_message=f"CSV結合エラー: {str(e)}"
-            )
-        
+            # 2-4. 結合して保存し、結果を生成
+            return self._merge_and_save(csv_files, output_dir)
         except Exception as e:
-            return MergeResult.create_failure(
-                error_message=f"予期しないエラーが発生しました: {str(e)}"
-            )
+            return self._handle_exception(e)
+
+    # 共通処理の抽出
+    def _merge_and_save(self, csv_files, output_dir: str | Path) -> MergeResult:
+        merged_file = self.merger.merge(csv_files)
+        output_path = self.repository.save(merged_file, output_dir)
+        return MergeResult.create_success(
+            output_path=output_path,
+            merged_file_count=len(csv_files),
+            total_rows=len(merged_file.data),
+            message=f"CSVファイルの結合が完了しました。出力: {output_path}"
+        )
+
+    def _handle_exception(self, e: Exception) -> MergeResult:
+        if isinstance(e, CsvFileNotFoundError):
+            return MergeResult.create_failure(error_message=f"ファイルが見つかりません: {str(e)}")
+        if isinstance(e, InvalidCsvFormatError):
+            return MergeResult.create_failure(error_message=f"CSVフォーマットが不正です: {str(e)}")
+        if isinstance(e, MergeError):
+            return MergeResult.create_failure(error_message=f"結合処理でエラーが発生しました: {str(e)}")
+        if isinstance(e, EmptyDataError):
+            return MergeResult.create_failure(error_message=f"データが空です: {str(e)}")
+        if isinstance(e, CsvMergerError):
+            return MergeResult.create_failure(error_message=f"CSV結合エラー: {str(e)}")
+        return MergeResult.create_failure(error_message=f"予期しないエラーが発生しました: {str(e)}")
 
