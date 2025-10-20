@@ -2265,3 +2265,77 @@ python main.py --help
 ---
 
 
+## 2025年10月20日 - ZIP入力対応とリリース反映
+
+### 🎯 目的
+
+複数のCSVがZIPで提供されるケースに対応し、ファイルシステムに痕跡を残さず処理できるようにする。また、ローカルでのマージ運用方針に従い、develop/main を順次更新して GitHub に反映する。
+
+---
+
+### 🔴 Red: テスト追加（ZIP対応）
+
+- 追加ファイル: `tests/unit/infra/repositories/test_csv_repository_zip.py`
+- テストケース（3件）:
+  1. ZIP内の複数CSVを読み込める
+  2. 存在しないZIPでエラーを返す
+  3. 不正な日時CSVを含むZIPで詳細エラーを返す
+- 既存フィクスチャを活用（`full_format.csv`, `no_column_missing.csv`, `invalid_dates.csv`）
+
+---
+
+### 🟢 Green: 実装（Infrastructure）
+
+- 変更ファイル: `infra/repositories/csv_repository.py`
+- 新規メソッド: `load_from_zip(zip_path: str | Path) -> list[CsvFile]`
+  - `tempfile.TemporaryDirectory()` を使用し一時展開（処理後自動削除）
+  - `zipfile.ZipFile.extractall()` で展開
+  - `**/*.csv` を再帰探索し、既存の `load()` を再利用
+- 外部パッケージ導入なし（標準ライブラリのみ）
+
+---
+
+### 🧪 テスト結果
+
+```
+100 passed in 10.4s
+```
+
+- 新規3テスト追加により、合計テスト数が100に増加
+
+---
+
+### 📝 ドキュメント更新
+
+- 変更ファイル: `doc/05_infrastructure_specification.md`
+- 追記: `1.4 load_from_zip()` の仕様
+  - 目的、処理フロー、例外、セキュリティ注意、対応テスト
+- 設計判断の補強: 二重検証の意義を `doc/01_1_design_decisions.md` に追記済（5.5節）
+
+---
+
+### 🔀 Git運用（ローカルマージ方針）
+
+- ブランチ: `feature/zip-support` を作成し作業
+- マージ: `develop` ← `feature/zip-support`（`--no-ff`）
+- マージ: `main` ← `develop`（`--no-ff`）
+- プッシュ: `origin/develop`, `origin/main` へ反映
+
+コミット例:
+```
+feat(infra): ZIP入力対応 load_from_zip を追加
+tests: ZIP対応ユニットテストを追加 (100 tests pass)
+docs: Infrastructure仕様にZIP対応を追記
+```
+
+---
+
+### 📊 現在のメトリクス（2025/10/20）
+
+- テスト総数: 100（すべて成功）
+- 主要変更点: ZIP入力対応、仕様書追記、設計判断ドキュメント更新
+- リリース状態: `main` に反映済（`develop` 同期済）
+
+---
+
+
