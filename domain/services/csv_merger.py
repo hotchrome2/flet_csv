@@ -55,7 +55,9 @@ class CsvMerger:
         timestamp_col = CsvSchema.TIMESTAMP_COLUMN
         merged_df[timestamp_col] = pd.to_datetime(merged_df[timestamp_col])
         merged_df = merged_df.sort_values(by=timestamp_col).reset_index(drop=True)
-        # ソート後、元の文字列フォーマットに戻す
+        # ソート後、標準フォーマット（YYYY/MM/DD HH:MM:SS）に統一
+        # 注: 入力は様々なフォーマット（ISO 8601など）を受け入れるが、
+        #     出力は統一されたフォーマットに変換される
         merged_df[timestamp_col] = merged_df[timestamp_col].dt.strftime("%Y/%m/%d %H:%M:%S")
         
         # 日時の重複チェック
