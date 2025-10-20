@@ -117,3 +117,72 @@ class MergeCsvFilesUseCase:
                 error_message=f"予期しないエラーが発生しました: {str(e)}"
             )
 
+
+    def execute_from_zip(
+        self,
+        zip_path: str | Path,
+        output_dir: str | Path
+    ) -> MergeResult:
+        """ZIP内のCSVを読み込み結合するユースケースを実行
+        
+        Args:
+            zip_path: 入力ZIPファイルのパス
+            output_dir: 出力先ディレクトリ
+        
+        Returns:
+            結合結果を表すMergeResultオブジェクト
+        """
+        try:
+            # 1. ZIPからCSV群を読み込み
+            csv_files = self.repository.load_from_zip(zip_path)
+
+            # 空チェック
+            if not csv_files:
+                return MergeResult.create_failure(
+                    error_message="ZIPファイル内にCSVファイルがありません"
+                )
+
+            # 2. CSVファイルを結合
+            merged_file = self.merger.merge(csv_files)
+
+            # 3. 結合結果を保存
+            output_path = self.repository.save(merged_file, output_dir)
+
+            # 4. 成功結果を返す
+            return MergeResult.create_success(
+                output_path=output_path,
+                merged_file_count=len(csv_files),
+                total_rows=len(merged_file.data),
+                message=f"CSVファイルの結合が完了しました。出力: {output_path}"
+            )
+
+        except CsvFileNotFoundError as e:
+            return MergeResult.create_failure(
+                error_message=f"ファイルが見つかりません: {str(e)}"
+            )
+        
+        except InvalidCsvFormatError as e:
+            return MergeResult.create_failure(
+                error_message=f"CSVフォーマットが不正です: {str(e)}"
+            )
+        
+        except MergeError as e:
+            return MergeResult.create_failure(
+                error_message=f"結合処理でエラーが発生しました: {str(e)}"
+            )
+        
+        except EmptyDataError as e:
+            return MergeResult.create_failure(
+                error_message=f"データが空です: {str(e)}"
+            )
+        
+        except CsvMergerError as e:
+            return MergeResult.create_failure(
+                error_message=f"CSV結合エラー: {str(e)}"
+            )
+        
+        except Exception as e:
+            return MergeResult.create_failure(
+                error_message=f"予期しないエラーが発生しました: {str(e)}"
+            )
+
