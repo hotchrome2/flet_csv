@@ -3,8 +3,6 @@
 このモジュールはアプリケーションで扱うCSVファイルの
 カラム構造を定義します。
 """
-import re
-from datetime import datetime
 from typing import Any
 import pandas as pd
 
@@ -41,9 +39,9 @@ class CsvSchema:
     ]
 
     # 各カラムのデータ型定義
-    # "datetime_string"は特殊な型で、YYYY/MM/DD HH:00:00形式の文字列を示す
+    # "datetime_string"は特殊な型で、pandasが認識できる日時文字列を示す
     COLUMN_TYPES: dict[str, type | str] = {
-        "日時": "datetime_string",  # YYYY/MM/DD HH:00:00 形式（HH は 00〜23）
+        "日時": "datetime_string",  # pandasが認識可能な日時文字列（例: YYYY/MM/DD HH:00:00, YYYY-MM-DD HH:MM:SS など）
         "No": int,
         "電圧": int,
         "周波数": int,
@@ -51,12 +49,6 @@ class CsvSchema:
         "工事フラグ": int,  # 0 または 1
         "参照": int,  # 0 または 1
     }
-
-    # 日時フォーマットの正規表現パターン
-    # YYYY/MM/DD HH:00:00 形式、HHは00〜23
-    _DATETIME_PATTERN = re.compile(
-        r"^\d{4}/\d{2}/\d{2} ([01]\d|2[0-3]):00:00$"
-    )
 
     # 1日あたりの期待レコード数（00時〜23時の24時間）
     EXPECTED_RECORDS_PER_DAY: int = 24
@@ -127,51 +119,58 @@ class CsvSchema:
     def validate_datetime_format(cls, datetime_str: str) -> bool:
         """日時フォーマットを検証
         
-        YYYY/MM/DD HH:00:00 形式で、HHは00〜23であることを確認します。
+        pandasが認識可能な日時文字列かを確認します。
+        フォーマットは固定されておらず、pandasが解釈できれば有効とみなします。
         
         Args:
             datetime_str: 検証する日時文字列
             
         Returns:
-            フォーマットが正しい場合True、それ以外はFalse
+            pandasが認識できる日時フォーマットの場合True、それ以外はFalse
         """
         if not isinstance(datetime_str, str):
             return False
-        return cls._DATETIME_PATTERN.match(datetime_str) is not None
+        
+        # 空文字列は無効
+        if not datetime_str.strip():
+            return False
+        
+        try:
+            # pandasでパースできるか試す
+            pd.to_datetime(datetime_str)
+            return True
+        except (ValueError, pd.errors.ParserError, Exception):
+            return False
 
     @classmethod
     def validate_datetime_value(cls, datetime_str: str) -> bool:
         """日付値の妥当性を検証
         
         フォーマットだけでなく、実際の日付として妥当かをチェックします。
+        - pandasで認識可能な日時文字列か
         - 実在する日付か（2月30日、13月など存在しない日付を検出）
         - 妥当な年の範囲か（1900年〜2100年）
-        - pd.to_datetime()で変換可能か（結合処理で使用するため）
         
         Args:
-            datetime_str: 検証する日時文字列（YYYY/MM/DD HH:00:00形式）
+            datetime_str: 検証する日時文字列（pandasが認識可能な形式）
             
         Returns:
             妥当な日付値の場合True、それ以外はFalse
         """
-        # まずフォーマットをチェック
+        # まずフォーマットをチェック（pandasでパースできるか）
         if not cls.validate_datetime_format(datetime_str):
             return False
         
         try:
-            # datetimeオブジェクトとしてパース
-            dt = datetime.strptime(datetime_str, "%Y/%m/%d %H:%M:%S")
+            # pd.to_datetime()で変換
+            dt = pd.to_datetime(datetime_str)
             
             # 年の範囲をチェック（1900年〜2100年）
             if dt.year < 1900 or dt.year > 2100:
                 return False
             
-            # pd.to_datetime()でも変換可能かチェック
-            # （結合処理で使用するため、ここで確認しておく）
-            pd.to_datetime(datetime_str)
-            
             return True
-        except (ValueError, Exception):
+        except (ValueError, pd.errors.ParserError, Exception):
             # パースに失敗した場合は不正な日付
             return False
 
@@ -210,7 +209,7 @@ class CsvSchema:
         - 重複がない
         
         Args:
-            datetime_strings: 日時文字列のリスト
+            datetime_strings: 日時文字列のリスト（pandasが認識可能な形式）
             
         Returns:
             有効な1日分のデータの場合True、それ以外はFalse
@@ -227,19 +226,20 @@ class CsvSchema:
             if not cls.validate_datetime_format(dt_str):
                 return False
             
-            # 日付と時刻を分離（YYYY/MM/DD HH:00:00 形式）
-            parts = dt_str.split(" ")
-            if len(parts) != 2:
+            try:
+                # pandasでパース
+                dt = pd.to_datetime(dt_str)
+                
+                # 日付部分を抽出（年月日）
+                date_part = dt.date()
+                
+                # 時刻部分を抽出
+                hour = dt.hour
+                
+                dates.add(date_part)
+                hours.add(hour)
+            except (ValueError, pd.errors.ParserError, Exception):
                 return False
-            
-            date_part = parts[0]
-            time_part = parts[1]
-            
-            # 時刻部分から時間を抽出
-            hour = int(time_part.split(":")[0])
-            
-            dates.add(date_part)
-            hours.add(hour)
         
         # すべて同じ日付かチェック
         if len(dates) != 1:

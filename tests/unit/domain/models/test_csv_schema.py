@@ -129,16 +129,27 @@ class TestCsvSchema:
     def test_validate_datetime_format_invalid(self):
         """無効な日時フォーマットを検出できる"""
         invalid_datetimes = [
-            "2025-10-01 10:00:00",  # ハイフン区切り
-            "2025/10/01 10:30:00",  # 30分（毎正時でない）
-            "2025/10/01 24:00:00",  # 24時（23時が最大）
-            "2025/10/01",           # 時刻なし
-            "10:00:00",             # 日付なし
             "invalid",              # 完全に不正
+            "2025年10月01日",       # 日本語形式
+            "abc123",               # ランダムな文字列
+            "",                     # 空文字列
         ]
         
         for dt in invalid_datetimes:
             assert CsvSchema.validate_datetime_format(dt) is False
+    
+    def test_validate_datetime_format_flexible(self):
+        """pandasが認識可能な様々な日時フォーマットを受け入れる"""
+        flexible_datetimes = [
+            "2025-10-01 10:00:00",  # ハイフン区切り（ISO 8601形式）
+            "2025/10/01 10:30:00",  # 30分（毎正時でなくても可）
+            "2025/10/01",           # 時刻なし（日付のみ）
+            "10:00:00",             # 日付なし（時刻のみ、今日の日付が補完される）
+            "2025-10-01T10:00:00",  # ISO 8601形式（T区切り）
+        ]
+        
+        for dt in flexible_datetimes:
+            assert CsvSchema.validate_datetime_format(dt) is True
 
     def test_validate_datetime_value_valid(self):
         """妥当な日付値を検証できる"""
