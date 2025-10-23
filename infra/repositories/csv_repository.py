@@ -175,6 +175,11 @@ class CsvRepository:
             # カラム名が日時フォーマットなら → ヘッダーなし
             if self._looks_like_datetime(first_col_name):
                 df = pd.read_csv(file_path, encoding=encoding, header=None)
+                # 末尾列が全行 NaN（ヘッダーなしで各行が末尾カンマ等）なら削除
+                if df.shape[1] > 0:
+                    last_col = df.iloc[:, -1]
+                    if last_col.isna().all():
+                        df = df.iloc[:, :-1]
                 return df
             else:
                 # ヘッダーありと判断
