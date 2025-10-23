@@ -10,8 +10,7 @@ def test_headerless_with_trailing_comma_drops_last_na_column(tmp_path: Path) -> 
     """
     csv_path = tmp_path / "trailing_comma.csv"
     lines = [
-        "2025/10/18 00:00:00,100,50,1000,0,\n",
-        "2025/10/18 01:00:00,100,50,1000,0,\n",
+        f"2025/10/18 {hour:02d}:00:00,100,50,1000,0,\n" for hour in range(24)
     ]
     csv_path.write_text("".join(lines), encoding="utf-8")
 
@@ -19,10 +18,10 @@ def test_headerless_with_trailing_comma_drops_last_na_column(tmp_path: Path) -> 
     result = repo.load(csv_path)
 
     # 正規化後: 7列（No, 日時, 電圧, 周波数, パワー, 工事フラグ, 参照）
-    assert result.row_count == 2
+    assert result.row_count == 24
     assert result.column_count == 7
     assert "No" in result.column_names
     assert "参照" in result.column_names
-    assert list(result.data["No"]) == [1, 2]
-    assert list(result.data["参照"]) == [0, 0]
+    assert list(result.data["No"]) == list(range(1, 25))
+    assert list(result.data["参照"]) == [0] * 24
 

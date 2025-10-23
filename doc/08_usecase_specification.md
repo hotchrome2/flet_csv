@@ -185,46 +185,9 @@ return MergeResult.create_success(
 
 ---
 
-### 2.3 execute_from_zip()メソッド（NEW）
+### 2.3 ZIP入力（撤廃）
 
-```python
-def execute_from_zip(
-    self,
-    zip_path: str | Path,
-    output_dir: str | Path
-) -> MergeResult:
-    """ZIP内のCSVを読み込み結合するユースケース"""
-```
-
-#### 目的
-
-1つのZIPファイルにまとめられた複数のCSVファイルを読み込み、正規化・結合して保存する。ファイルシステムへの恒久的展開は行わず、Infrastructure層が一時ディレクトリを用いて処理する。
-
-#### 処理フロー
-
-```
-1. ZIPからCSV群を読み込み (CsvRepository.load_from_zip)
-   ↓
-2. CSVファイルを結合 (CsvMerger.merge)
-   ↓
-3. 結合結果を保存 (CsvRepository.save)
-   ↓
-4. 成功結果を返す (MergeResult.create_success)
-```
-
-#### 入力検証
-
-- ZIP内にCSVが1つもない場合は失敗とする。
-  - エラーメッセージ: "ZIPファイル内にCSVファイルがありません"
-
-#### 例外マッピング
-
-- `CsvFileNotFoundError` → "ファイルが見つかりません: ..."（ZIP未存在 等）
-- `InvalidCsvFormatError` → "CSVフォーマットが不正です: ..."（ZIP内CSVの不正）
-- `MergeError` → "結合処理でエラーが発生しました: ..."
-- `EmptyDataError` → "データが空です: ..."
-- `CsvMergerError` → "CSV結合エラー: ..."
-- `Exception` → "予期しないエラーが発生しました: ..."
+要件変更により、ZIP入力のユースケースは撤廃しました。入力はCSVファイルパスのリストを直接指定してください。
 
 #### 成功結果の返却
 
@@ -314,13 +277,7 @@ except InvalidCsvFormatError as e:
 | `test_failure_when_empty_data` | 空のCSVファイルの場合、失敗を返す | ・`is_successful`が`False`<br>・エラーメッセージに"データが空です"が含まれる |
 | `test_failure_when_empty_file_list` | 入力ファイルリストが空の場合、失敗を返す | ・`is_successful`が`False`<br>・エラーメッセージに"入力ファイルが指定されていません"が含まれる |
 
-#### ZIP入力テスト（3テスト）
-
-| テスト名 | 説明 | 検証内容 |
-|---------|------|---------|
-| `test_execute_from_zip_success` | ZIPから複数CSVを読み込み結合 | ・`is_successful`が`True`<br>・`load_from_zip`が1回呼ばれる<br>・`save`が1回呼ばれる |
-| `test_execute_from_zip_nonexistent_zip` | 存在しないZIPは失敗 | ・`is_successful`が`False`<br>・"ファイルが見つかりません"を含む |
-| `test_execute_from_zip_invalid_csv_in_zip` | ZIP内CSVが不正なら失敗 | ・`is_successful`が`False`<br>・"CSVフォーマットが不正です"を含む |
+（ZIP入力に関するテストは撤廃）
 
 ### 4.3 モックの設定
 
@@ -493,7 +450,7 @@ def merge_csv_files_command(input_paths: list[str], output_dir: str):
 
 | 日付 | バージョン | 変更内容 | 著者 |
 |------|-----------|---------|------|
-| 2025-10-20 | 1.1.0 | execute_from_zip() 仕様とZIPテスト仕様を追加 | - |
+| 2025-10-20 | 1.1.0 | execute_from_zip() 仕様とZIPテスト仕様を追加（のち撤廃） | - |
 | 2025-10-19 | 1.0.0 | 初版作成 - MergeCsvFilesUseCase仕様、テスト仕様 | - |
 
 ---

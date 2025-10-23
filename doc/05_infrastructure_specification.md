@@ -13,7 +13,6 @@
 3. [文字コード自動判定](#3-文字コード自動判定)
 4. [正規化処理](#4-正規化処理)
 5. [データ検証](#5-データ検証)
-   - [1.4 load_from_zip()メソッド](#14-load_from_zipメソッド)
 
 ---
 
@@ -76,46 +75,9 @@ def save(self, csv_file: CsvFile, output_path: str | Path) -> None:
 
 ---
 
-### 1.4 load_from_zip()メソッド
+### 1.4 ZIP入力対応（撤廃）
 
-```python
-def load_from_zip(self, zip_path: str | Path) -> list[CsvFile]:
-```
-
-#### 目的
-
-ZIPファイル内に含まれる複数のCSVを読み込み、各々を正規化した `CsvFile` のリストとして返す。
-ファイルシステムに恒久的な展開を残さないため、標準ライブラリ `tempfile.TemporaryDirectory()` を用いて
-一時ディレクトリに展開し、処理終了時に自動削除する。
-
-#### 処理フロー
-
-1. **ZIPファイル存在チェック**
-   - 存在しない場合は `CsvFileNotFoundError`
-2. **一時ディレクトリに展開**
-   - `zipfile.ZipFile.extractall()` を使用
-3. **CSVファイル探索**
-   - `**/*.csv` を再帰的に走査
-4. **各CSVの読み込み**
-   - 既存の `load()` メソッドをそのまま再利用（正規化・検証・ソートを適用）
-5. **`CsvFile` のリストを返却**
-
-#### 例外
-
-- `CsvFileNotFoundError`: ZIPファイルが存在しない
-- `InvalidCsvFormatError`: 内包されるCSVのフォーマットが不正（詳細な行番号メッセージを踏襲）
-
-#### セキュリティ/運用上の注意
-
-- 一時ディレクトリは `with` ブロックを抜けると自動削除されるため、ファイルシステムに残らない
-- 追加の外部パッケージは不要（標準ライブラリのみ）
-
-#### テスト
-
-- `tests/unit/infra/repositories/test_csv_repository_zip.py`
-  - 複数CSVを含むZIPの読み込み
-  - 存在しないZIPの例外
-  - 不正日時CSVを含むZIPの例外（詳細メッセージ検証）
+要件変更により、ZIP入力のサポートは撤廃しました。現在は、ディレクトリ内のCSVファイルを直接指定して読み込みます。
 
 ---
 

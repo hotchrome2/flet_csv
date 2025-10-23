@@ -69,32 +69,7 @@ class MergeCsvFilesUseCase:
             return self._handle_exception(e)
 
 
-    def execute_from_zip(
-        self,
-        zip_path: str | Path,
-        output_dir: str | Path
-    ) -> MergeResult:
-        """ZIP内のCSVを読み込み結合するユースケースを実行
-        
-        Args:
-            zip_path: 入力ZIPファイルのパス
-            output_dir: 出力先ディレクトリ
-        
-        Returns:
-            結合結果を表すMergeResultオブジェクト
-        """
-        try:
-            # 1. ZIPからCSV群を読み込み
-            csv_files = self.repository.load_from_zip(zip_path)
-            # 空チェック
-            if not csv_files:
-                return MergeResult.create_failure(
-                    error_message="ZIPファイル内にCSVファイルがありません"
-                )
-            # 2-4. 結合して保存し、結果を生成
-            return self._merge_and_save(csv_files, output_dir)
-        except Exception as e:
-            return self._handle_exception(e)
+    # ZIP入力はサポートしない（要件撤廃）
 
     # 共通処理の抽出
     def _merge_and_save(self, csv_files, output_dir: str | Path) -> MergeResult:

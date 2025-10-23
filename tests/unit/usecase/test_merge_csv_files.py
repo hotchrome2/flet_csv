@@ -231,62 +231,9 @@ class TestMergeCsvFilesUseCase:
         called_csv_files = mock_merger.merge.call_args[0][0]
         assert len(called_csv_files) == 3
 
-    def test_execute_from_zip_success(self, usecase, mock_repository, mock_merger):
-        """ZIPファイルから複数CSVを読み込み結合できる"""
-        # Arrange
-        zip_path = Path("tests/fixtures/inputs.zip")
-        output_dir = Path("static/downloads")
+    # ZIP入力関連のテストは要件撤廃につき削除
 
-        mock_csv_files = [Mock(spec=CsvFile) for _ in range(2)]
-        mock_merged_file = Mock(spec=CsvFile)
-        mock_merged_file.data = [0] * 48  # 48行（2日分など）
-        mock_output_path = Path("static/downloads/merged_20251020_120000.csv")
+    # ZIP入力関連のテストは要件撤廃につき削除
 
-        mock_repository.load_from_zip.return_value = mock_csv_files
-        mock_merger.merge.return_value = mock_merged_file
-        mock_repository.save.return_value = mock_output_path
-
-        # Act
-        result = usecase.execute_from_zip(zip_path, output_dir)
-
-        # Assert
-        assert result.is_successful is True
-        assert result.output_path == mock_output_path
-        mock_repository.load_from_zip.assert_called_once_with(zip_path)
-        mock_merger.merge.assert_called_once()
-        mock_repository.save.assert_called_once_with(mock_merged_file, output_dir)
-
-    def test_execute_from_zip_nonexistent_zip(self, usecase, mock_repository):
-        """存在しないZIPファイルなら失敗結果を返す"""
-        # Arrange
-        zip_path = Path("no_such.zip")
-        output_dir = Path("static/downloads")
-
-        mock_repository.load_from_zip.side_effect = CsvFileNotFoundError("ZIPファイルが見つかりません: no_such.zip")
-
-        # Act
-        result = usecase.execute_from_zip(zip_path, output_dir)
-
-        # Assert
-        assert result.is_successful is False
-        assert "ファイルが見つかりません" in result.error_message
-        assert "no_such.zip" in result.error_message
-
-    def test_execute_from_zip_invalid_csv_in_zip(self, usecase, mock_repository):
-        """ZIP内のCSVが不正なら詳細メッセージ付きで失敗を返す"""
-        # Arrange
-        zip_path = Path("tests/fixtures/invalid_inputs.zip")
-        output_dir = Path("static/downloads")
-
-        mock_repository.load_from_zip.side_effect = InvalidCsvFormatError(
-            "invalid_dates.csv: 不正な日時が検出されました（3行目、5行目）"
-        )
-
-        # Act
-        result = usecase.execute_from_zip(zip_path, output_dir)
-
-        # Assert
-        assert result.is_successful is False
-        assert "CSVフォーマットが不正です" in result.error_message
-        assert "invalid_dates.csv" in result.error_message
+    # ZIP入力関連のテストは要件撤廃につき削除
 
