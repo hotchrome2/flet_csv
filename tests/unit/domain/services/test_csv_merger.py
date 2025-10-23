@@ -152,6 +152,31 @@ class TestCsvMerger:
         
         assert "重複" in str(exc_info.value)
 
+    def test_merge_requires_consecutive_days(self, csv_merger, valid_csv_file_day1, valid_csv_file_day3):
+        """日付が連続でない場合はエラーになる"""
+        # Arrange: 2025/10/18 と 2025/10/20（19日が欠損）
+        csv_files = [valid_csv_file_day1, valid_csv_file_day3]
+        
+        # Act & Assert
+        with pytest.raises(MergeError) as exc_info:
+            csv_merger.merge(csv_files)
+        
+        assert "連続" in str(exc_info.value) or "欠損" in str(exc_info.value)
+
+    def test_merge_accepts_consecutive_days(self, csv_merger, valid_csv_file_day1, valid_csv_file_day2, valid_csv_file_day3):
+        """日付が連続である場合は正常に結合できる"""
+        # Arrange: 2025/10/18, 2025/10/19, 2025/10/20（連続）
+        csv_files = [valid_csv_file_day1, valid_csv_file_day2, valid_csv_file_day3]
+        
+        # Act
+        result = csv_merger.merge(csv_files)
+        
+        # Assert
+        assert result.row_count == 24 * 3
+        datetimes = result.data["日時"].tolist()
+        assert datetimes[0] == "2025/10/18 00:00:00"
+        assert datetimes[-1] == "2025/10/20 23:00:00"
+
     def test_merge_with_empty_list_raises_error(self, csv_merger):
         """空リストを渡すとエラーを発生させる"""
         # Act & Assert
