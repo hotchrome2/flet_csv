@@ -97,7 +97,8 @@ flet_csv/
 │   ├── 05_infrastructure_specification.md  # Infrastructure層詳細仕様
 │   ├── 06_github_setup.md    # GitHubリポジトリ登録手順
 │   ├── 07_git_workflow.md    # Git開発ワークフロー（feature→develop→main）
-│   └── 08_usecase_specification.md    # UseCase層詳細仕様
+│   ├── 08_usecase_specification.md    # UseCase層詳細仕様
+│   └── 09_cli_specification.md        # CLIエントリーポイント詳細仕様
 │
 ├── scripts/                   # ユーティリティスクリプト
 │
@@ -121,7 +122,7 @@ flet_csv/
 - **models/csv_schema.py**
   - CSVファイルのスキーマ定義（ドメイン知識）
   - 必須カラム: 「日時」「No」「電圧」「周波数」「パワー」「工事フラグ」「参照」
-  - データ型定義: 整数、日時フォーマット（YYYY/MM/DD HH:00:00）
+  - データ型定義: 整数、pandasが認識可能な日時文字列
   - バリデーションルール: カラムの存在チェック、型チェック
   
 - **models/merge_result.py**
@@ -132,6 +133,7 @@ flet_csv/
 - **services/csv_merger.py**
   - CSV結合の核となるビジネスロジック
   - 時系列ソート、重複排除、データ整合性チェック
+  - 連続日検証（最小日〜最大日が欠損なく連続していること）
   
 - **exceptions.py**
   - ドメイン固有の例外クラス定義
@@ -231,6 +233,10 @@ flet_csv/
   - 日付妥当性検証（年の範囲、存在しない日付の検出）
   - CsvRepositoryでの自動検証
   - pd.to_datetime()での変換可能性チェック（検証と結合の一貫性確保）
+  
+**改善** (2025-10-23):
+- ヘッダーなしCSV読み込み時、末尾が「全行NaN」の最終列を自動削除
+- ヘッダーなし期待列数をスキーマから動的算出（マジックナンバー排除）
 
 #### タスク4: UseCase層の実装（TDDサイクル）✅ **完了**
 - [x] **Red**: `usecase/merge_csv_files.py` の統合テスト作成
