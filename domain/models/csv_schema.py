@@ -38,6 +38,9 @@ class CsvSchema:
         "参照",
     ]
 
+    # ヘッダーなしCSVで欠落している列（正規化で追加する列）
+    HEADERLESS_OMITTED_COLUMNS: list[str] = ["No", "参照"]
+
     # 各カラムのデータ型定義
     # "datetime_string"は特殊な型で、pandasが認識できる日時文字列を示す
     COLUMN_TYPES: dict[str, type | str] = {
@@ -114,6 +117,15 @@ class CsvSchema:
             必須カラムの数
         """
         return len(cls.REQUIRED_COLUMNS)
+
+    @classmethod
+    def headerless_expected_column_count(cls) -> int:
+        """ヘッダーなしCSVで期待する列数を取得
+        
+        Returns:
+            ヘッダーなしCSVが持つべき列数（No/参照を除く必須列数）
+        """
+        return len([c for c in cls.REQUIRED_COLUMNS if c not in cls.HEADERLESS_OMITTED_COLUMNS])
 
     @classmethod
     def validate_datetime_format(cls, datetime_str: str) -> bool:

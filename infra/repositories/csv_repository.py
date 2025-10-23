@@ -4,6 +4,7 @@
 統一された7列フォーマットに正規化してDomain層に渡します。
 """
 from pathlib import Path
+from datetime import datetime
 import zipfile
 import tempfile
 import pandas as pd
@@ -73,8 +74,6 @@ class CsvRepository:
         Returns:
             保存されたファイルのパス
         """
-        from datetime import datetime
-        
         output_dir_path = Path(output_dir)
         
         # 出力ディレクトリが存在しない場合は作成
@@ -226,9 +225,10 @@ class CsvRepository:
         Returns:
             正規化されたDataFrame
         """
-        if len(df.columns) != 5:
+        expected_cols = CsvSchema.headerless_expected_column_count()
+        if len(df.columns) != expected_cols:
             raise InvalidCsvFormatError(
-                f"ヘッダーなしCSVは5列である必要があります（実際: {len(df.columns)}列）"
+                f"ヘッダーなしCSVは{expected_cols}列である必要があります（実際: {len(df.columns)}列）"
             )
         
         # 列名を設定
