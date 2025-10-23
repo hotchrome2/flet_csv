@@ -2265,3 +2265,155 @@ python main.py --help
 ---
 
 
+## 2025年10月20日 - ZIP入力対応とリリース反映
+
+### 🎯 目的
+
+複数のCSVがZIPで提供されるケースに対応し、ファイルシステムに痕跡を残さず処理できるようにする。また、ローカルでのマージ運用方針に従い、develop/main を順次更新して GitHub に反映する。
+
+---
+
+### 🔴 Red: テスト追加（ZIP対応）
+
+- 追加ファイル: `tests/unit/infra/repositories/test_csv_repository_zip.py`
+- テストケース（3件）:
+  1. ZIP内の複数CSVを読み込める
+  2. 存在しないZIPでエラーを返す
+  3. 不正な日時CSVを含むZIPで詳細エラーを返す
+- 既存フィクスチャを活用（`full_format.csv`, `no_column_missing.csv`, `invalid_dates.csv`）
+
+---
+
+### 🟢 Green: 実装（Infrastructure）
+
+- 変更ファイル: `infra/repositories/csv_repository.py`
+- 新規メソッド: `load_from_zip(zip_path: str | Path) -> list[CsvFile]`
+  - `tempfile.TemporaryDirectory()` を使用し一時展開（処理後自動削除）
+  - `zipfile.ZipFile.extractall()` で展開
+  - `**/*.csv` を再帰探索し、既存の `load()` を再利用
+- 外部パッケージ導入なし（標準ライブラリのみ）
+
+---
+
+### 🧪 テスト結果
+
+```
+100 passed in 10.4s
+```
+
+- 新規3テスト追加により、合計テスト数が100に増加
+
+---
+
+### 📝 ドキュメント更新
+
+- 変更ファイル: `doc/05_infrastructure_specification.md`
+- 追記: `1.4 load_from_zip()` の仕様
+  - 目的、処理フロー、例外、セキュリティ注意、対応テスト
+- 設計判断の補強: 二重検証の意義を `doc/01_1_design_decisions.md` に追記済（5.5節）
+
+---
+
+### 🔀 Git運用（ローカルマージ方針）
+
+- ブランチ: `feature/zip-support` を作成し作業
+- マージ: `develop` ← `feature/zip-support`（`--no-ff`）
+- マージ: `main` ← `develop`（`--no-ff`）
+- プッシュ: `origin/develop`, `origin/main` へ反映
+
+コミット例:
+```
+feat(infra): ZIP入力対応 load_from_zip を追加
+tests: ZIP対応ユニットテストを追加 (100 tests pass)
+docs: Infrastructure仕様にZIP対応を追記
+```
+
+---
+
+### 📊 現在のメトリクス（2025/10/20）
+
+- テスト総数: 100（すべて成功）
+- 主要変更点: ZIP入力対応、仕様書追記、設計判断ドキュメント更新
+- リリース状態: `main` に反映済（`develop` 同期済）
+
+---
+
+
+## 2025年10月23日 - 連続日検証の追加とCSV読み込み改善（ドメイン/インフラ/ドキュメント）
+
+### 🎯 目的
+- 入力CSV群が「連続した日付」であることを検証し、欠損日・重複日を早期に検出する
+- ヘッダーなしCSVで行末カンマ等により生じる「末尾完全NaN列」を安全に無視する
+- マジックナンバー（5列）を排除し、スキーマ定義に自動追従
+
+---
+
+### 🔧 変更点（実装）
+1) Domain: 連続日検証の追加とロジック簡素化  
+   - 対象: `domain/services/csv_merger.py`
+   - メソッド: `_validate_continuous_days` を新設（命名を分かりやすく）
+   - 判定仕様: 最小日と最大日の差分で連続性を判定（個数一致）
+   ```python
+   expected_count = (max_date - min_date).days + 1
+   unique_count = len(set(dates))
+   assert expected_count == unique_count
+   ```
+   - エラー条件: 欠損日または重複日がある場合は `MergeError`
+
+2) Infra: ヘッダーなしCSVの末尾NaN列を削除  
+   - 対象: `infra/repositories/csv_repository.py`
+   - 仕様: ヘッダーなし読み込み直後、最終列が「全行NaN」の場合はその列を削除
+
+3) Infra: マジックナンバー排除  
+   - 対象: `CsvSchema` に `HEADERLESS_OMITTED_COLUMNS` と `headerless_expected_column_count()` を追加
+   - 効果: ヘッダーなし期待列数をスキーマから動的算出（固定の「5」を撤廃）
+
+---
+
+### 🧪 テスト/フィクスチャ
+- 追加: 末尾カンマ用ヘッダーなしCSVフィクスチャ
+  - `tests/fixtures/csv/headerless_trailing_comma.csv`
+- 追加: 連続日検証用フィクスチャ（3日分）
+  - `tests/fixtures/csv/day1_2025-10-18.csv`
+  - `tests/fixtures/csv/day2_2025-10-19.csv`
+  - `tests/fixtures/csv/day3_2025-10-20.csv`
+- 追加テスト（抜粋）
+  - `tests/unit/infra/repositories/test_csv_repository_trailing_na_col.py`（NaN末尾列削除）
+  - `tests/unit/infra/repositories/test_csv_repository_trailing_na_with_fixture.py`
+  - `tests/unit/domain/services/test_csv_merger.py` に連続/非連続日のテストを追加
+- 結果: 仮想環境有効化の上で該当テスト・全体テストとも成功
+
+---
+
+### 📄 ドキュメント
+- `doc/04_domain_specification.md` に「連続日検証」要件とエラー条件を追記
+
+---
+
+### 📌 主要コミット（要旨）
+
+---
+
+## 2025年10月23日 - ZIP入力対応の撤廃
+
+### 🎯 理由
+- 入力要件の簡素化により、ZIPファイル入力は不要となったため
+
+### 🔧 対応
+- コードからZIP関連のAPIを削除
+  - `infra/repositories/csv_repository.py`: `load_from_zip()` を撤廃
+  - `usecase/merge_csv_files.py`: `execute_from_zip()` を撤廃
+- テストからZIP関連ケースを削除
+  - `tests/unit/infra/repositories/test_csv_repository_zip.py` を削除
+  - `tests/unit/usecase/test_merge_csv_files.py` の ZIP 関連テストを削除
+- 仕様書更新
+  - `doc/05_infrastructure_specification.md`: ZIP節を撤廃
+  - `doc/08_usecase_specification.md`: ZIPユースケースの章を撤廃（注記のみ）
+
+### 🧪 結果
+- ZIP関連を除外後も全テスト成功
+- domain: 連続日検証 `_validate_continuous_days` 追加、ロジック簡素化
+- infra: ヘッダーなし最終NaN列の削除、ヘッダーなし期待列数の動的化
+- tests: 末尾NaN列・連続/非連続日のユニットテストとフィクスチャ追加
+- docs: Domain仕様に連続日要件を追記
+

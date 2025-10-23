@@ -4,6 +4,7 @@
 統一された7列フォーマットに正規化してDomain層に渡します。
 """
 from pathlib import Path
+from datetime import datetime
 import zipfile
 import tempfile
 import pandas as pd
@@ -73,8 +74,6 @@ class CsvRepository:
         Returns:
             保存されたファイルのパス
         """
-        from datetime import datetime
-        
         output_dir_path = Path(output_dir)
         
         # 出力ディレクトリが存在しない場合は作成
@@ -90,39 +89,7 @@ class CsvRepository:
         
         return output_path
 
-    def load_from_zip(self, zip_path: str | Path) -> list[CsvFile]:
-        """ZIP内のCSVファイルを読み込み、正規化したCsvFileのリストを返す
-        
-        一時ディレクトリに展開し、処理後に自動削除します。
-        
-        Args:
-            zip_path: 入力ZIPファイルのパス
-        
-        Returns:
-            CsvFileオブジェクトのリスト
-        
-        Raises:
-            CsvFileNotFoundError: ZIPファイルが存在しない場合
-            InvalidCsvFormatError: CSVフォーマットが不正な場合
-        """
-        path = Path(zip_path)
-        if not path.exists():
-            raise CsvFileNotFoundError(f"ZIPファイルが見つかりません: {zip_path}")
-
-        csv_files: list[CsvFile] = []
-
-        with tempfile.TemporaryDirectory() as tmpdir:
-            tmpdir_path = Path(tmpdir)
-            # ZIPを展開
-            with zipfile.ZipFile(path, 'r') as zf:
-                zf.extractall(tmpdir_path)
-
-            # 再帰的にCSVを探索
-            for csv_path in tmpdir_path.glob("**/*.csv"):
-                # 既存のloadを再利用
-                csv_files.append(self.load(csv_path))
-
-        return csv_files
+    # ZIP入力はサポートしない（要件撤廃）
 
     def _detect_encoding(self, file_path: Path) -> str:
         """ファイルの文字コードを自動判定
@@ -176,6 +143,11 @@ class CsvRepository:
             # カラム名が日時フォーマットなら → ヘッダーなし
             if self._looks_like_datetime(first_col_name):
                 df = pd.read_csv(file_path, encoding=encoding, header=None)
+                # 末尾列が全行 NaN（ヘッダーなしで各行が末尾カンマ等）なら削除
+                if df.shape[1] > 0:
+                    last_col = df.iloc[:, -1]
+                    if last_col.isna().all():
+                        df = df.iloc[:, :-1]
                 return df
             else:
                 # ヘッダーありと判断
@@ -226,9 +198,10 @@ class CsvRepository:
         Returns:
             正規化されたDataFrame
         """
-        if len(df.columns) != 5:
+        expected_cols = CsvSchema.headerless_expected_column_count()
+        if len(df.columns) != expected_cols:
             raise InvalidCsvFormatError(
-                f"ヘッダーなしCSVは5列である必要があります（実際: {len(df.columns)}列）"
+                f"ヘッダーなしCSVは{expected_cols}列である必要があります（実際: {len(df.columns)}列）"
             )
         
         # 列名を設定

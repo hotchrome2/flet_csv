@@ -231,3 +231,9 @@ class TestMergeCsvFilesUseCase:
         called_csv_files = mock_merger.merge.call_args[0][0]
         assert len(called_csv_files) == 3
 
+    # ZIP入力関連のテストは要件撤廃につき削除
+
+    # ZIP入力関連のテストは要件撤廃につき削除
+
+    # ZIP入力関連のテストは要件撤廃につき削除
+

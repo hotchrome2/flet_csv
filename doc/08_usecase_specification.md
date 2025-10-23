@@ -185,6 +185,23 @@ return MergeResult.create_success(
 
 ---
 
+### 2.3 ZIP入力（撤廃）
+
+要件変更により、ZIP入力のユースケースは撤廃しました。入力はCSVファイルパスのリストを直接指定してください。
+
+#### 成功結果の返却
+
+```python
+return MergeResult.create_success(
+    output_path=output_path,
+    merged_file_count=len(csv_files),
+    total_rows=len(merged_file.data),
+    message=f"CSVファイルの結合が完了しました。出力: {output_path}"
+)
+```
+
+---
+
 ## 3. エラーハンドリング
 
 ### 3.1 エラーハンドリング戦略
@@ -259,6 +276,8 @@ except InvalidCsvFormatError as e:
 | `test_failure_when_merge_error_occurs` | 結合時にエラーが発生した場合、失敗を返す | ・`is_successful`が`False`<br>・エラーメッセージに"結合処理でエラーが発生しました"が含まれる<br>・"日時の重複"が含まれる |
 | `test_failure_when_empty_data` | 空のCSVファイルの場合、失敗を返す | ・`is_successful`が`False`<br>・エラーメッセージに"データが空です"が含まれる |
 | `test_failure_when_empty_file_list` | 入力ファイルリストが空の場合、失敗を返す | ・`is_successful`が`False`<br>・エラーメッセージに"入力ファイルが指定されていません"が含まれる |
+
+（ZIP入力に関するテストは撤廃）
 
 ### 4.3 モックの設定
 
@@ -431,6 +450,7 @@ def merge_csv_files_command(input_paths: list[str], output_dir: str):
 
 | 日付 | バージョン | 変更内容 | 著者 |
 |------|-----------|---------|------|
+| 2025-10-20 | 1.1.0 | execute_from_zip() 仕様とZIPテスト仕様を追加（のち撤廃） | - |
 | 2025-10-19 | 1.0.0 | 初版作成 - MergeCsvFilesUseCase仕様、テスト仕様 | - |
 
 ---
